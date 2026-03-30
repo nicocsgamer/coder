@@ -5,13 +5,10 @@ import {
 	FingerprintIcon,
 	KeyIcon,
 	LockIcon,
-	ServerIcon,
 	ShieldIcon,
 	UserIcon,
 } from "lucide-react";
 import type { FC } from "react";
-import { useQuery } from "react-query";
-import { userChatProviderConfigs } from "#/api/queries/chats";
 import type { User } from "#/api/typesGenerated";
 import { Avatar } from "#/components/Avatar/Avatar";
 import { GitIcon } from "#/components/Icons/GitIcon";
@@ -29,11 +26,6 @@ interface SidebarProps {
 
 export const Sidebar: FC<SidebarProps> = ({ user }) => {
 	const { entitlements, experiments, buildInfo } = useDashboard();
-	const agentsEnabled = experiments.includes("agents") || isDevBuild(buildInfo);
-	const { data: providerConfigs } = useQuery({
-		...userChatProviderConfigs(),
-		enabled: agentsEnabled,
-	});
 	const showSchedulePage =
 		entitlements.features.advanced_template_scheduling.enabled;
 
@@ -53,11 +45,6 @@ export const Sidebar: FC<SidebarProps> = ({ user }) => {
 			<SidebarNavItem href="external-auth" icon={GitIcon}>
 				External Authentication
 			</SidebarNavItem>
-			{agentsEnabled && providerConfigs && providerConfigs.length > 0 && (
-				<SidebarNavItem href="providers" icon={ServerIcon}>
-					Providers
-				</SidebarNavItem>
-			)}
 			{(experiments.includes("oauth2") || isDevBuild(buildInfo)) && (
 				<SidebarNavItem href="oauth2-provider" icon={ShieldIcon}>
 					OAuth2 Applications
