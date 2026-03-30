@@ -3924,7 +3924,7 @@ Write out the current server config as YAML to stdout.`,
 		},
 		{
 			Name:        "AI Bridge Proxy Domain Allowlist",
-			Description: "Comma-separated list of AI provider domains for which HTTPS traffic will be decrypted and routed through AI Bridge. Requests to other domains will be tunneled directly without decryption. Supported domains: api.anthropic.com, api.openai.com, api.individual.githubcopilot.com.",
+			Description: "Comma-separated list of AI provider domains for which HTTPS traffic will be decrypted and routed through AI Bridge. Requests to other domains will be tunneled directly without decryption. Supported domains: api.anthropic.com, api.openai.com, api.individual.githubcopilot.com, api.business.githubcopilot.com, api.enterprise.githubcopilot.com.",
 			Flag:        "aibridge-proxy-domain-allowlist",
 			Env:         "CODER_AIBRIDGE_PROXY_DOMAIN_ALLOWLIST",
 			Value:       &c.AI.BridgeProxyConfig.DomainAllowlist,
