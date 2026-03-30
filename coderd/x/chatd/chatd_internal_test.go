@@ -245,7 +245,6 @@ func TestResolveUserProviderAPIKeys_StripsDisabledFallbackKeys(t *testing.T) {
 		CentralApiKeyEnabled:       true,
 		AllowCentralApiKeyFallback: true,
 	}}, nil)
-	db.EXPECT().GetUserChatProviderKeys(gomock.Any(), ownerID).Return(nil, nil)
 
 	keys, err := server.resolveUserProviderAPIKeys(ctx, ownerID)
 	require.NoError(t, err)
@@ -257,6 +256,40 @@ func TestResolveUserProviderAPIKeys_StripsDisabledFallbackKeys(t *testing.T) {
 	require.Equal(t, "https://anthropic.example.com", keys.BaseURL("anthropic"))
 	require.Equal(t, map[string]string{"anthropic": "anthropic-deployment-key"}, keys.ByProvider)
 	require.Equal(t, map[string]string{"anthropic": "https://anthropic.example.com"}, keys.BaseURLByProvider)
+}
+
+func TestResolveUserProviderAPIKeys_SkipsUserKeyLookupWhenNoProviderAllowsUserKeys(t *testing.T) {
+	t.Parallel()
+
+	ctx := testutil.Context(t, testutil.WaitShort)
+	ctrl := gomock.NewController(t)
+	db := dbmock.NewMockStore(ctrl)
+	ownerID := uuid.New()
+
+	server := &Server{
+		db: db,
+		configCache: newChatConfigCache(
+			context.Background(),
+			db,
+			quartz.NewReal(),
+		),
+		providerAPIKeys: chatprovider.ProviderAPIKeys{
+			OpenAI: "openai-deployment-key",
+			ByProvider: map[string]string{
+				"openai": "openai-deployment-key",
+			},
+		},
+	}
+
+	db.EXPECT().GetEnabledChatProviders(gomock.Any()).Return([]database.ChatProvider{{
+		Provider:             "openai",
+		CentralApiKeyEnabled: true,
+	}}, nil)
+
+	keys, err := server.resolveUserProviderAPIKeys(ctx, ownerID)
+	require.NoError(t, err)
+	require.Equal(t, "openai-deployment-key", keys.OpenAI)
+	require.Equal(t, "openai-deployment-key", keys.APIKey("openai"))
 }
 
 func TestRefreshChatWorkspaceSnapshot_NoReloadWhenWorkspacePresent(t *testing.T) {

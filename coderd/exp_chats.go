@@ -547,6 +547,7 @@ func (api *API) listChatModels(rw http.ResponseWriter, r *http.Request) {
 	configuredProviders := make(
 		[]chatprovider.ConfiguredProvider, 0, len(enabledProviders),
 	)
+	enabledProviderNames := make(map[string]struct{}, len(enabledProviders))
 	for _, provider := range enabledProviders {
 		configuredProviders = append(
 			configuredProviders, chatprovider.ConfiguredProvider{
@@ -559,6 +560,11 @@ func (api *API) listChatModels(rw http.ResponseWriter, r *http.Request) {
 				AllowCentralAPIKeyFallback: provider.AllowCentralApiKeyFallback,
 			},
 		)
+		normalizedProvider := chatprovider.NormalizeProvider(provider.Provider)
+		if normalizedProvider == "" {
+			continue
+		}
+		enabledProviderNames[normalizedProvider] = struct{}{}
 	}
 	configuredModels := make(
 		[]chatprovider.ConfiguredModel, 0, len(enabledModels),
@@ -612,6 +618,14 @@ func (api *API) listChatModels(rw http.ResponseWriter, r *http.Request) {
 			response.Providers[i].UnavailableReason = availability.UnavailableReason
 		}
 	}
+	filteredProviders := response.Providers[:0]
+	for _, provider := range response.Providers {
+		if _, ok := enabledProviderNames[chatprovider.NormalizeProvider(provider.Provider)]; !ok {
+			continue
+		}
+		filteredProviders = append(filteredProviders, provider)
+	}
+	response.Providers = filteredProviders
 
 	httpapi.Write(ctx, rw, http.StatusOK, response)
 }
