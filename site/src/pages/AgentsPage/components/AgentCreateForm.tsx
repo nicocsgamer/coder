@@ -180,7 +180,7 @@ export const AgentCreateForm: FC<AgentCreateFormProps> = ({
 			<>
 				Configure your API keys in{" "}
 				<Link
-					to="/settings/providers"
+					to="/agents/settings/api-keys"
 					className="underline transition-colors hover:text-content-primary"
 				>
 					Settings

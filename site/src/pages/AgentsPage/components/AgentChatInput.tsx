@@ -685,305 +685,312 @@ export const AgentChatInput: FC<AgentChatInputProps> = ({
 						className="hidden"
 					/>
 				)}
-				<div className="flex items-center justify-between gap-2 px-2.5 pb-1.5">
-					<div className="flex min-w-0 items-center gap-1">
-						{/* Plus menu */}
-						<Popover open={plusMenuOpen} onOpenChange={setPlusMenuOpen}>
-							<PopoverTrigger asChild>
-								<Button
-									type="button"
-									variant="subtle"
-									size="icon"
-									className="size-7 shrink-0 rounded-full [&>svg]:!size-icon-sm [&>svg]:p-0"
-									disabled={isDisabled}
-									aria-label="More options"
-								>
-									<PlusIcon />
-								</Button>
-							</PopoverTrigger>
-							<PopoverContent
-								side="bottom"
-								align="start"
-								className="w-auto min-w-[200px] p-1"
-							>
-								{onAttach && (
-									<button
-										type="button"
-										onClick={() => {
-											setPlusMenuOpen(false);
-											fileInputRef.current?.click();
-										}}
-										className="group flex h-8 w-full cursor-pointer items-center gap-1.5 border-none bg-transparent px-1 text-xs text-content-secondary shadow-none transition-colors hover:text-content-primary"
-									>
-										<ImageIcon className="h-3.5 w-3.5 shrink-0" />
-										Attach image
-									</button>
-								)}
-								{workspaceOptions && onWorkspaceChange && (
-									<Popover
-										open={workspacePickerOpen}
-										onOpenChange={setWorkspacePickerOpen}
-									>
-										<PopoverTrigger asChild>
-											<button
-												type="button"
-												disabled={isDisabled || isWorkspaceLoading}
-												className="group flex h-8 w-full cursor-pointer items-center gap-1.5 border-none bg-transparent px-1 text-xs text-content-secondary shadow-none transition-colors hover:text-content-primary disabled:cursor-not-allowed disabled:opacity-50"
-											>
-												<MonitorIcon className="h-3.5 w-3.5 shrink-0" />
-												<span>Attach workspace</span>
-												<ChevronRightIcon
-													className={cn(
-														"ml-auto size-icon-sm transition-transform",
-														workspacePickerOpen && "rotate-180",
-													)}
-												/>
-											</button>
-										</PopoverTrigger>
-										<PopoverContent
-											side="right"
-											align="start"
-											sideOffset={8}
-											className="w-64 p-0"
-										>
-											<Command loop>
-												<CommandInput
-													placeholder="Search workspaces..."
-													className="text-xs"
-												/>
-												<CommandList>
-													<CommandEmpty className="text-xs">
-														No workspaces found
-													</CommandEmpty>
-													<CommandGroup>
-														{workspaceOptions.map((workspace) => (
-															<CommandItem
-																className="text-xs font-normal"
-																key={workspace.id}
-																value={workspace.name}
-																onSelect={() => {
-																	onWorkspaceChange(workspace.id);
-																	setWorkspacePickerOpen(false);
-																	setPlusMenuOpen(false);
-																}}
-															>
-																{workspace.name}
-																{selectedWorkspaceId === workspace.id && (
-																	<Check className="ml-auto size-icon-sm shrink-0" />
-																)}
-															</CommandItem>
-														))}
-													</CommandGroup>
-												</CommandList>
-											</Command>
-										</PopoverContent>
-									</Popover>
-								)}
-								{enabledMcpServers.length > 0 && (
-									<>
-										<Separator className="my-1" />
-										{enabledMcpServers.map((server) => {
-											const isForceOn = server.availability === "force_on";
-											const isSelected =
-												isForceOn ||
-												(selectedMCPServerIds?.includes(server.id) ?? false);
-											const needsAuth =
-												server.auth_type === "oauth2" && !server.auth_connected;
-											const isConnecting = mcpConnectingId === server.id;
-											return (
-												<div
-													key={server.id}
-													className="flex items-center gap-2 px-2 py-1.5"
-												>
-													{server.icon_url ? (
-														<ExternalImage
-															src={server.icon_url}
-															alt=""
-															className="size-4 shrink-0 rounded-sm"
-														/>
-													) : (
-														<ServerIcon className="size-4 shrink-0 text-content-secondary" />
-													)}
-													<span className="min-w-0 flex-1 truncate text-xs text-content-primary">
-														{server.display_name}
-													</span>
-													{needsAuth ? (
-														<Button
-															variant="outline"
-															size="sm"
-															className="h-6 shrink-0 px-2 text-[10px] leading-none"
-															onClick={() => handleMcpConnect(server)}
-															disabled={isDisabled || mcpConnectingId !== null}
-														>
-															{isConnecting ? (
-																<Spinner loading className="size-2.5" />
-															) : null}
-															Auth
-														</Button>
-													) : (
-														<Switch
-															checked={isSelected}
-															onCheckedChange={(checked) =>
-																handleMcpToggle(server.id, checked)
-															}
-															disabled={isDisabled || isForceOn}
-															aria-label={`${isSelected ? "Disable" : "Enable"} ${server.display_name}`}
-														/>
-													)}
-												</div>
-											);
-										})}
-									</>
-								)}
-							</PopoverContent>
-						</Popover>
-						{isModelCatalogLoading ? (
-							<Skeleton className="h-6 w-24 rounded" />
-						) : (
-							<ModelSelector
-								value={selectedModel}
-								onValueChange={onModelChange}
-								options={modelOptions}
-								disabled={isDisabled}
-								placeholder={modelSelectorPlaceholder}
-								formatProviderLabel={formatProviderLabel}
-								dropdownSide="top"
-								dropdownAlign="center"
-							/>
-						)}
-						{/* Badge row — all badges and the pill always
-						 * render so the DOM structure never changes.
-						 * Overflow badges use invisible + order-1 to
-						 * hide and reorder via CSS. The pill is invisible
-						 * when there's no overflow but still occupies
-						 * layout space, preventing measurement flicker. */}
-						<div
-							ref={badgeContainerRef}
-							className="flex min-w-0 items-center gap-1 overflow-hidden"
-						>
-							{allBadges.map((badge, i) => {
-								const isOverflow = overflowCount > 0 && i >= visibleCount;
-								return (
-									<ToolBadge
-										key={badge.kind === "workspace" ? "ws" : badge.server.id}
-										badge={badge}
-										onRemoveWorkspace={handleRemoveWorkspace}
-										onRemoveMcp={handleRemoveMcp}
-										className={isOverflow ? "invisible order-1" : undefined}
-									/>
-								);
-							})}
-							{/* Pill — always in the DOM so it permanently
-							 * reserves layout space. Invisible when nothing
-							 * overflows. CSS order keeps it before order-1
-							 * (overflow) badges. */}
-							<Popover
-								open={overflowPopoverOpen && overflowCount > 0}
-								onOpenChange={setOverflowPopoverOpen}
-							>
+				<div className="px-2.5 pb-1.5">
+					<div className="flex items-center justify-between gap-2">
+						<div className="flex min-w-0 items-center gap-1">
+							{/* Plus menu */}
+							<Popover open={plusMenuOpen} onOpenChange={setPlusMenuOpen}>
 								<PopoverTrigger asChild>
-									<button
+									<Button
 										type="button"
-										className={cn(
-											"inline-flex shrink-0 cursor-pointer items-center gap-1 rounded-full border-0 bg-surface-secondary px-2 py-0.5 text-xs font-medium text-content-secondary transition-colors hover:bg-surface-tertiary hover:text-content-primary",
-											overflowCount === 0 && "invisible",
-										)}
-										aria-label={`${overflowCount} more item${overflowCount !== 1 ? "s" : ""}`}
-										aria-hidden={overflowCount === 0}
+										variant="subtle"
+										size="icon"
+										className="size-7 shrink-0 rounded-full [&>svg]:!size-icon-sm [&>svg]:p-0"
+										disabled={isDisabled}
+										aria-label="More options"
 									>
-										+{overflowCount}
-									</button>
+										<PlusIcon />
+									</Button>
 								</PopoverTrigger>
 								<PopoverContent
-									side="top"
+									side="bottom"
 									align="start"
-									className="flex w-auto max-w-64 flex-wrap gap-1 p-2"
+									className="w-auto min-w-[200px] p-1"
 								>
-									{overflowBadges.map((badge) => (
+									{onAttach && (
+										<button
+											type="button"
+											onClick={() => {
+												setPlusMenuOpen(false);
+												fileInputRef.current?.click();
+											}}
+											className="group flex h-8 w-full cursor-pointer items-center gap-1.5 border-none bg-transparent px-1 text-xs text-content-secondary shadow-none transition-colors hover:text-content-primary"
+										>
+											<ImageIcon className="h-3.5 w-3.5 shrink-0" />
+											Attach image
+										</button>
+									)}
+									{workspaceOptions && onWorkspaceChange && (
+										<Popover
+											open={workspacePickerOpen}
+											onOpenChange={setWorkspacePickerOpen}
+										>
+											<PopoverTrigger asChild>
+												<button
+													type="button"
+													disabled={isDisabled || isWorkspaceLoading}
+													className="group flex h-8 w-full cursor-pointer items-center gap-1.5 border-none bg-transparent px-1 text-xs text-content-secondary shadow-none transition-colors hover:text-content-primary disabled:cursor-not-allowed disabled:opacity-50"
+												>
+													<MonitorIcon className="h-3.5 w-3.5 shrink-0" />
+													<span>Attach workspace</span>
+													<ChevronRightIcon
+														className={cn(
+															"ml-auto size-icon-sm transition-transform",
+															workspacePickerOpen && "rotate-180",
+														)}
+													/>
+												</button>
+											</PopoverTrigger>
+											<PopoverContent
+												side="right"
+												align="start"
+												sideOffset={8}
+												className="w-64 p-0"
+											>
+												<Command loop>
+													<CommandInput
+														placeholder="Search workspaces..."
+														className="text-xs"
+													/>
+													<CommandList>
+														<CommandEmpty className="text-xs">
+															No workspaces found
+														</CommandEmpty>
+														<CommandGroup>
+															{workspaceOptions.map((workspace) => (
+																<CommandItem
+																	className="text-xs font-normal"
+																	key={workspace.id}
+																	value={workspace.name}
+																	onSelect={() => {
+																		onWorkspaceChange(workspace.id);
+																		setWorkspacePickerOpen(false);
+																		setPlusMenuOpen(false);
+																	}}
+																>
+																	{workspace.name}
+																	{selectedWorkspaceId === workspace.id && (
+																		<Check className="ml-auto size-icon-sm shrink-0" />
+																	)}
+																</CommandItem>
+															))}
+														</CommandGroup>
+													</CommandList>
+												</Command>
+											</PopoverContent>
+										</Popover>
+									)}
+									{enabledMcpServers.length > 0 && (
+										<>
+											<Separator className="my-1" />
+											{enabledMcpServers.map((server) => {
+												const isForceOn = server.availability === "force_on";
+												const isSelected =
+													isForceOn ||
+													(selectedMCPServerIds?.includes(server.id) ?? false);
+												const needsAuth =
+													server.auth_type === "oauth2" &&
+													!server.auth_connected;
+												const isConnecting = mcpConnectingId === server.id;
+												return (
+													<div
+														key={server.id}
+														className="flex items-center gap-2 px-2 py-1.5"
+													>
+														{server.icon_url ? (
+															<ExternalImage
+																src={server.icon_url}
+																alt=""
+																className="size-4 shrink-0 rounded-sm"
+															/>
+														) : (
+															<ServerIcon className="size-4 shrink-0 text-content-secondary" />
+														)}
+														<span className="min-w-0 flex-1 truncate text-xs text-content-primary">
+															{server.display_name}
+														</span>
+														{needsAuth ? (
+															<Button
+																variant="outline"
+																size="sm"
+																className="h-6 shrink-0 px-2 text-[10px] leading-none"
+																onClick={() => handleMcpConnect(server)}
+																disabled={
+																	isDisabled || mcpConnectingId !== null
+																}
+															>
+																{isConnecting ? (
+																	<Spinner loading className="size-2.5" />
+																) : null}
+																Auth
+															</Button>
+														) : (
+															<Switch
+																checked={isSelected}
+																onCheckedChange={(checked) =>
+																	handleMcpToggle(server.id, checked)
+																}
+																disabled={isDisabled || isForceOn}
+																aria-label={`${isSelected ? "Disable" : "Enable"} ${server.display_name}`}
+															/>
+														)}
+													</div>
+												);
+											})}
+										</>
+									)}
+								</PopoverContent>
+							</Popover>
+							{isModelCatalogLoading ? (
+								<Skeleton className="h-6 w-24 rounded" />
+							) : (
+								<ModelSelector
+									value={selectedModel}
+									onValueChange={onModelChange}
+									options={modelOptions}
+									disabled={isDisabled}
+									placeholder={modelSelectorPlaceholder}
+									formatProviderLabel={formatProviderLabel}
+									dropdownSide="top"
+									dropdownAlign="center"
+								/>
+							)}
+							{/* Badge row — all badges and the pill always
+							 * render so the DOM structure never changes.
+							 * Overflow badges use invisible + order-1 to
+							 * hide and reorder via CSS. The pill is invisible
+							 * when there's no overflow but still occupies
+							 * layout space, preventing measurement flicker. */}
+							<div
+								ref={badgeContainerRef}
+								className="flex min-w-0 items-center gap-1 overflow-hidden"
+							>
+								{allBadges.map((badge, i) => {
+									const isOverflow = overflowCount > 0 && i >= visibleCount;
+									return (
 										<ToolBadge
-											key={
-												badge.kind === "workspace"
-													? "ws-overflow"
-													: badge.server.id
-											}
+											key={badge.kind === "workspace" ? "ws" : badge.server.id}
 											badge={badge}
 											onRemoveWorkspace={handleRemoveWorkspace}
 											onRemoveMcp={handleRemoveMcp}
+											className={isOverflow ? "invisible order-1" : undefined}
 										/>
-									))}
-								</PopoverContent>
-							</Popover>
-						</div>
-					</div>
-					<div className="flex items-center gap-2">
-						{speech.isSupported && !isStreaming && (
-							<>
-								<Button
-									type="button"
-									variant="subtle"
-									size="icon"
-									className="size-7 shrink-0 rounded-full [&>svg]:!size-icon-sm [&>svg]:p-0"
-									onClick={
-										speech.isRecording
-											? handleCancelRecording
-											: handleStartRecording
-									}
-									disabled={isDisabled}
-									aria-label={
-										speech.isRecording ? "Cancel voice input" : "Voice input"
-									}
+									);
+								})}
+								{/* Pill — always in the DOM so it permanently
+								 * reserves layout space. Invisible when nothing
+								 * overflows. CSS order keeps it before order-1
+								 * (overflow) badges. */}
+								<Popover
+									open={overflowPopoverOpen && overflowCount > 0}
+									onOpenChange={setOverflowPopoverOpen}
 								>
-									{speech.isRecording ? <XIcon /> : <MicIcon />}
-								</Button>
-								{speech.error && !speech.isRecording && (
-									<span
-										className="text-2xs text-content-destructive"
-										role="alert"
+									<PopoverTrigger asChild>
+										<button
+											type="button"
+											className={cn(
+												"inline-flex shrink-0 cursor-pointer items-center gap-1 rounded-full border-0 bg-surface-secondary px-2 py-0.5 text-xs font-medium text-content-secondary transition-colors hover:bg-surface-tertiary hover:text-content-primary",
+												overflowCount === 0 && "invisible",
+											)}
+											aria-label={`${overflowCount} more item${overflowCount !== 1 ? "s" : ""}`}
+											aria-hidden={overflowCount === 0}
+										>
+											+{overflowCount}
+										</button>
+									</PopoverTrigger>
+									<PopoverContent
+										side="top"
+										align="start"
+										className="flex w-auto max-w-64 flex-wrap gap-1 p-2"
 									>
-										{speech.error === "not-allowed"
-											? "Mic access denied"
-											: "Voice input failed"}
+										{overflowBadges.map((badge) => (
+											<ToolBadge
+												key={
+													badge.kind === "workspace"
+														? "ws-overflow"
+														: badge.server.id
+												}
+												badge={badge}
+												onRemoveWorkspace={handleRemoveWorkspace}
+												onRemoveMcp={handleRemoveMcp}
+											/>
+										))}
+									</PopoverContent>
+								</Popover>
+							</div>
+						</div>
+						<div className="flex items-center gap-2">
+							{speech.isSupported && !isStreaming && (
+								<>
+									<Button
+										type="button"
+										variant="subtle"
+										size="icon"
+										className="size-7 shrink-0 rounded-full [&>svg]:!size-icon-sm [&>svg]:p-0"
+										onClick={
+											speech.isRecording
+												? handleCancelRecording
+												: handleStartRecording
+										}
+										disabled={isDisabled}
+										aria-label={
+											speech.isRecording ? "Cancel voice input" : "Voice input"
+										}
+									>
+										{speech.isRecording ? <XIcon /> : <MicIcon />}
+									</Button>
+									{speech.error && !speech.isRecording && (
+										<span
+											className="text-2xs text-content-destructive"
+											role="alert"
+										>
+											{speech.error === "not-allowed"
+												? "Mic access denied"
+												: "Voice input failed"}
+										</span>
+									)}
+								</>
+							)}
+							{contextUsage !== undefined && (
+								<ContextUsageIndicator usage={contextUsage} />
+							)}
+							{isStreaming && onInterrupt && (
+								<Button
+									size="icon"
+									variant="default"
+									className="size-7 rounded-full transition-colors [&>svg]:!size-3 [&>svg]:p-0"
+									onClick={onInterrupt}
+									disabled={isInterruptPending}
+								>
+									<Square className="fill-current" />
+									<span className="sr-only">Stop</span>
+								</Button>
+							)}
+							{!(isStreaming && editingQueuedMessageID === null) && (
+								<Button
+									size="icon"
+									variant="default"
+									className="size-7 rounded-full transition-colors [&>svg]:!size-5 [&>svg]:p-0"
+									onClick={
+										speech.isRecording ? handleAcceptRecording : handleSubmit
+									}
+									disabled={speech.isRecording ? false : !canSend}
+								>
+									{isLoading ? (
+										<Spinner size="sm" loading aria-hidden="true" />
+									) : speech.isRecording ? (
+										<CheckIcon />
+									) : (
+										<ArrowUpIcon />
+									)}
+									<span className="sr-only">
+										{speech.isRecording
+											? "Accept voice input"
+											: sendButtonLabel}
 									</span>
-								)}
-							</>
-						)}
-						{contextUsage !== undefined && (
-							<ContextUsageIndicator usage={contextUsage} />
-						)}
-						{isStreaming && onInterrupt && (
-							<Button
-								size="icon"
-								variant="default"
-								className="size-7 rounded-full transition-colors [&>svg]:!size-3 [&>svg]:p-0"
-								onClick={onInterrupt}
-								disabled={isInterruptPending}
-							>
-								<Square className="fill-current" />
-								<span className="sr-only">Stop</span>
-							</Button>
-						)}
-						{!(isStreaming && editingQueuedMessageID === null) && (
-							<Button
-								size="icon"
-								variant="default"
-								className="size-7 rounded-full transition-colors [&>svg]:!size-5 [&>svg]:p-0"
-								onClick={
-									speech.isRecording ? handleAcceptRecording : handleSubmit
-								}
-								disabled={speech.isRecording ? false : !canSend}
-							>
-								{isLoading ? (
-									<Spinner size="sm" loading aria-hidden="true" />
-								) : speech.isRecording ? (
-									<CheckIcon />
-								) : (
-									<ArrowUpIcon />
-								)}
-								<span className="sr-only">
-									{speech.isRecording ? "Accept voice input" : sendButtonLabel}
-								</span>
-							</Button>
-						)}
+								</Button>
+							)}
+						</div>
 					</div>
 					{modelSelectorHelp ? (
 						<div className="px-3 pb-1 text-2xs text-content-secondary">
